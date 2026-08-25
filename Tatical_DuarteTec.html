@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CENTRAL DE INTELIGÊNCIA | PC-PA</title>
+    
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Bibliotecas de Alta Performance -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- FIREBASE SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #0a0f1a;
+            --panel-bg: #141b2d;
+            --primary: #00f2ff;
+            --primary-glow: rgba(0, 242, 255, 0.3);
+            --accent: #f2ff00;
+            --danger: #ff0055;
+            --success: #00ff88;
+            --purple: #b624ff;
+            --text-high: #ffffff;
+            --text-dim: #8b9bb4;
+            --border: #2d3748;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-high);
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        body {
+            background: linear-gradient(rgba(10, 15, 26, 0.95), rgba(10, 15, 26, 0.95)),
+                        url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+        }
+
+        /* --- TELA DE AUTENTICAÇÃO --- */
+        #auth-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .auth-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .auth-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .auth-toggle {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        
+        .auth-toggle span { color: var(--primary); text-decoration: underline; }
+
+        /* --- PAINEL PRINCIPAL --- */
+        #dashboard-container {
+            display: none; /* Oculto até logar */
+            width: 100%;
+            padding-bottom: 40px;
+        }
+
+        .navbar {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(20, 27, 45, 0.85);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0; 
+            z-index: 100;
+        }
+
+        .navbar-content {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            color: var(--primary);
+        }
+        
+        .export-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(0,0,0,0.3);
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            align-items: center;
+            max-width: 100%;
+        }
+
+        .filter-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(242, 255, 0, 0.1);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(242, 255, 0, 0.3);
+        }
+        
+        .filter-container select {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            font-weight: 700;
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        .filter-container select option { background: var(--bg-deep); color: white; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            color: var(--primary);
+        }
+
+        .stat-row { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 20px; 
+            width: 100%;
+        }
+        
+        .stat-item { 
+            text-align: center; 
+            padding: 12px 8px; 
+            background: rgba(255,255,255,0.03); 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .stat-value { font-size: 1.4rem; font-weight: 800; display: block; color: var(--text-high); }
+        .stat-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; }
+
+        .timer-box {
+            background: linear-gradient(135deg, #1a2236 0%, #0a0f1a 100%);
+            border-radius: 20px;
+            padding: 20px 15px;
+            text-align: center;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        #timer-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            color: var(--primary);
+            text-shadow: 0 0 15px var(--primary-glow);
+            margin: 12px 0;
+        }
+
+        .btn {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background: var(--primary); color: var(--bg-deep); width: 100%; margin-bottom: 10px;}
+        .btn-primary:hover { box-shadow: 0 0 15px var(--primary-glow); transform: translateY(-2px); }
+        
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-high); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        
+        .btn-pdf { background: rgba(255, 0, 85, 0.1); border: 1px solid var(--danger); color: #ff4d82; }
+        .btn-pdf:hover { background: var(--danger); color: white; }
+        
+        .btn-word { background: rgba(0, 102, 255, 0.1); border: 1px solid #4da6ff; color: #4da6ff; }
+        .btn-word:hover { background: #0066ff; color: white; }
+        
+        .btn-excel { background: rgba(0, 255, 136, 0.1); border: 1px solid var(--success); color: var(--success); }
+        .btn-excel:hover { background: var(--success); color: var(--bg-deep); }
+        
+        .btn-logout { background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); color: var(--danger); }
+        .btn-logout:hover { background: var(--danger); color: white; }
+
+        .input-group { margin-bottom: 15px; width: 100%; text-align: left; }
+        .input-group label { display: block; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; }
+        .input-group input, .input-group select {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            outline: none;
+            font-family: inherit;
+        }
+        .input-group input:focus, .input-group select:focus { border-color: var(--primary); }
+
+        .ai-hub {
+            background: linear-gradient(180deg, rgba(20, 27, 45, 0.9) 0%, rgba(10, 15, 26, 0.95) 100%);
+            border: 1px solid rgba(242, 255, 0, 0.3);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(242, 255, 0, 0.05);
+            width: 100%;
+        }
+        
+        .ai-header {
+            background: rgba(242, 255, 0, 0.1);
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(242, 255, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        .ai-messages {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .ai-msg {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-left: 3px solid;
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        .ai-msg.professor { border-left-color: var(--primary); }
+        .ai-msg.estrategista { border-left-color: var(--purple); }
+        
+        .ai-msg strong { display: block; margin-bottom: 5px; font-size: 0.75rem; text-transform: uppercase; }
+        .ai-msg.professor strong { color: var(--primary); }
+        .ai-msg.estrategista strong { color: var(--purple); }
+
+        .maestria-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 5px; overflow: hidden; }
+        .maestria-fill { height: 100%; background: var(--primary); width: 0%; transition: 1s ease; }
+
+        .table-container { 
+            width: 100%;
+            overflow-x: auto; 
+            margin-top: 15px; 
+            max-height: 350px; 
+            overflow-y: auto; 
+            border-radius: 8px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 320px; }
+        th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel-bg); z-index: 10;}
+        td { padding: 12px; border-bottom: 1px solid var(--border); word-break: break-word; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.7rem; white-space: nowrap;}
+        .badge-success { background: rgba(0, 255, 136, 0.1); color: var(--success); }
+        .badge-danger { background: rgba(255, 0, 85, 0.1); color: var(--danger); }
+        .badge-topic { background: rgba(255, 255, 255, 0.1); color: var(--text-high); font-size: 0.65rem; white-space: normal;}
+
+        /* MEDIA QUERIES (Celular) */
+        @media (max-width: 1100px) {
+            .main-grid { grid-template-columns: 1fr; padding: 15px; gap: 15px; }
+        }
+
+        @media (max-width: 600px) {
+            .navbar { padding: 0.8rem 0.6rem; }
+            .navbar-content { flex-direction: column; justify-content: center; text-align: center; gap: 10px; }
+            .logo { justify-content: center; width: 100%; font-size: 0.95rem; }
+            .export-group { width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 6px; }
+            .filter-container { grid-column: span 2; width: 100%; }
+            .btn { width: 100%; padding: 9px 6px; font-size: 0.68rem; margin-bottom: 0;}
+            
+            /* Ajustes específicos do Timer para mobile */
+            #timer-display { font-size: 2.1rem; }
+            
+            .stat-value { font-size: 1.15rem; }
+            .stat-label { font-size: 0.58rem; }
+            
+            .auth-box { padding: 20px; width: 90%; }
+        }
+
+        /* --- ESTILOS DINÂMICOS PARA EXPORTAÇÃO A4 (PDF) - MODO DOCUMENTO OFICIAL --- */
+        
+        /* Adiciona um título visível apenas no PDF */
+        #pdf-titulo-oficial { display: none; }
+        body.pdf-export-mode #pdf-titulo-oficial {
+            display: block;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #111;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #111;
+            text-transform: uppercase;
+        }
+
+        body.pdf-export-mode {
+            background: #ffffff !important; /* Força fundo branco */
+            color: #1a1a1a !important; /* Força texto escuro */
+        }
+        
+        body.pdf-export-mode .main-grid {
+            /* Transforma em um grid mais organizado para o papel A4 */
+            grid-template-columns: 1fr 1fr !important; 
+            gap: 20px !important;
+            padding: 15px !important;
+        }
+
+        /* Oculta os painéis de interação (Formulário e Cronômetro) para não poluir o relatório */
+        body.pdf-export-mode .glass-panel:has(#study-form),
+        body.pdf-export-mode .timer-box {
+            display: none !important;
+        }
+
+        /* Expande o conteúdo principal e a IA para organizar melhor no papel */
+        body.pdf-export-mode main { grid-column: span 2; }
+        body.pdf-export-mode aside { grid-column: span 2; display: flex; gap: 20px; }
+        body.pdf-export-mode aside > div { flex: 1; }
+
+        /* Estilização dos painéis para tema claro */
+        body.pdf-export-mode .glass-panel,
+        body.pdf-export-mode .ai-hub {
+            background: #f8f9fa !important;
+            border: 1px solid #dee2e6 !important;
+            box-shadow: none !important;
+        }
+        
+        body.pdf-export-mode .ai-header {
+            background: #e9ecef !important;
+            color: #111 !important;
+            border-bottom: 1px solid #ccc !important;
+        }
+
+        body.pdf-export-mode .panel-header { color: #111 !important; }
+        
+        /* Ajuste das mensagens da IA para fundo claro */
+        body.pdf-export-mode .ai-msg {
+            background: #ffffff !important;
+            border: 1px solid #ccc !important;
+            color: #333 !important;
+        }
+        body.pdf-export-mode .ai-msg span { color: #333 !important; }
+        body.pdf-export-mode .ai-msg strong { color: #111 !important; }
+
+        /* Ajustes dos Card de Estatísticas */
+        body.pdf-export-mode .stat-item {
+            background: #ffffff !important;
+            border: 1px solid #ccc !important;
+        }
+        body.pdf-export-mode .stat-value { color: #111 !important; }
+        body.pdf-export-mode .stat-label { color: #666 !important; font-weight: bold; }
+
+        /* Ajustes das Tabelas e Rolagens */
+        body.pdf-export-mode .table-container,
+        body.pdf-export-mode .ai-messages {
+            max-height: none !important; 
+            overflow: visible !important;
+        }
+        body.pdf-export-mode th {
+            background: #e9ecef !important;
+            color: #111 !important;
+            border-bottom: 2px solid #ccc !important;
+        }
+        body.pdf-export-mode td {
+            color: #222 !important;
+            border-color: #eee !important;
+        }
+
+        body.pdf-export-mode .glass-panel,
+        body.pdf-export-mode .ai-hub,
+        body.pdf-export-mode tr {
+            page-break-inside: avoid !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TELA DE LOGIN / CADASTRO -->
+    <div id="auth-container">
+        <div class="auth-box">
+            <div class="auth-logo">
+                <i class="fa-solid fa-shield-halved"></i> TACTICAL_ESTUDOS
+            </div>
+            
+            <h3 id="auth-title" style="margin-bottom: 20px; font-size: 1.1rem; color: var(--text-high);">Acesso Restrito</h3>
+            
+            <form id="auth-form">
+                <div class="input-group">
+                    <label>E-mail</label>
+                    <input type="email" id="auth-email" required placeholder="agente@pcpa.com.br">
+                </div>
+                <div class="input-group">
+                    <label>Senha</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="auth-btn">Entrar</button>
+            </form>
+            
+            <div class="auth-toggle" onclick="toggleAuthMode()">
+                Não tem conta? <span>Cadastre-se</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAINEL PRINCIPAL (DASHBOARD) -->
+    <div id="dashboard-container">
+        <nav class="navbar" data-html2canvas-ignore="true">
+            <div class="navbar-content">
+                <div class="logo">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>TACTICAL CORE <small style="font-size: 0.6rem; vertical-align: middle;">ESCRIVÃO PC-PA</small></span>
+                </div>
+                
+                <div class="export-group">
+                    <div class="filter-container" title="Filtrar dados da dashboard">
+                        <i class="fa-solid fa-filter" style="color: var(--accent); font-size: 0.8rem;"></i>
+                        <select id="filtro-global" onchange="aplicarFiltroTemporal()">
+                            <option value="todos">Todo o Histórico</option>
+                            <option value="semana">Últimos 7 Dias</option>
+                            <option value="mes">1 Mês</option>
+                            <option value="2meses">2 Meses</option>
+                            <option value="3meses">3 Meses</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-pdf" onclick="exportarLayoutPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                    <button class="btn btn-excel" onclick="exportarExcel()"><i class="fa-solid fa-file-excel"></i> EXCEL</button>
+                    <button class="btn btn-logout" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> SAIR</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="main-grid" id="relatorio-tatico">
+            
+            <!-- Título visível apenas na impressão PDF -->
+            <div id="pdf-titulo-oficial">
+                Relatório de Inteligência Tática - PC/PA
+                <div style="font-size: 0.8rem; font-weight: 400; color: #555; margin-top: 5px;" id="data-pdf-gerado"></div>
+            </div>
+
+            <aside>
+                <div class="timer-box" data-html2canvas-ignore="true">
+                    <span class="stat-label">Modo Operacional</span>
+                    <div id="timer-display">00:00:00</div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-primary" id="timer-btn" onclick="toggleTimer()" style="flex: 1; margin-bottom: 0;">Iniciar</button>
+                        <button class="btn btn-outline" onclick="resetTimer()" style="flex: 1;">Reset</button>
+                    </div>
+                </div>
+
+                <div class="glass-panel" data-html2canvas-ignore="true">
+                    <div class="panel-header"><span><i class="fa-solid fa-pen-nib"></i> Registrar Missão</span></div>
+                    <form id="study-form">
+                        <div class="input-group">
+                            <label>Disciplina Geral</label>
+                            <select id="materia" required>
+                                <option value="Português">Português (Peso 2)</option>
+                                <option value="Direito Penal">Direito Penal</option>
+                                <option value="Direito Proc. Penal">Direito Proc. Penal</option>
+                                <option value="Direito Administrativo">Direito Administrativo</option>
+                                <option value="Direito Constitucional">Direito Constitucional</option>
+                                <option value="Informática">Informática</option>
+                                <option value="Raciocínio Lógico">Raciocínio Lógico</option>
+                                <option value="Legislação Especial">Legislação Especial</option>
+                                <option value="Arquivologia">Arquivologia</option>
+                                <option value="Estatuto PC-PA">Estatuto PC-PA</option>
+                                <option value="Conhecimentos PA">Conhecimentos PA</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Assunto(s) ou Artigo(s)</label>
+                            <input type="text" id="assunto" placeholder="Ex: Artigo 1, Inquérito" required autocomplete="off">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="input-group">
+                                <label>Acertos</label>
+                                <input type="number" id="acertos" value="0" min="0">
+                            </div>
+                            <div class="input-group">
+                                <label>Erros</label>
+                                <input type="number" id="erros" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Tempo de Missão (Horas)</label>
+                            <input type="number" step="0.01" id="horas" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar na Nuvem</button>
+                    </form>
+                </div>
+            </aside>
+
+            <main>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-label" id="label-horas">Horas (Filtro)</span>
+                        <span id="stat-horas" class="stat-value">0.0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Precisão</span>
+                        <span id="stat-precisao" class="stat-value">0%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Questões Feitas</span>
+                        <span id="stat-questoes" class="stat-value">0</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="margin-bottom: 20px;">
+                    <div class="panel-header"><span><i class="fa-solid fa-chart-area"></i> Curva de Esforço Diário</span></div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="panel-header"><span><i class="fa-solid fa-clock-rotate-left"></i> Relatório Analítico</span> <span class="badge badge-topic" id="qtd-registros">0 Registros</span></div>
+                    <div class="table-container">
+                        <table id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Matéria / Assuntos</th>
+                                    <th>Desempenho</th>
+                                    <th data-html2canvas-ignore="true"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+
+            <aside>
+                <div class="ai-hub">
+                    <div class="ai-header"><i class="fa-solid fa-microchip"></i> Inteligência de Erros</div>
+                    <div class="ai-messages" id="ai-messages">
+                        <div class="ai-msg">Aguardando dados...</div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="panel-header"><span><i class="fa-solid fa-award"></i> Maestria</span></div>
+                    <div id="mastery-list"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO DO FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAq6ZZZM3kzPbrJiRbrsKZoRGip3Fa_GXo",
+            authDomain: "device-streaming-73b1cecf.firebaseapp.com",
+            projectId: "device-streaming-73b1cecf",
+            storageBucket: "device-streaming-73b1cecf.firebasestorage.app",
+            messagingSenderId: "199754373498",
+            appId: "1:199754373498:web:40dc10ac5e956c9523dec3"
+        };
+
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Variáveis Globais
+        let registrosBrutos = [];
+        let timerSeconds = 0;
+        let timerInterval;
+        let isRunning = false;
+        let myChart;
+        let currentUser = null;
+        let unsubscribeSnapshot = null;
+        let isLoginMode = true; 
+
+        // --- SISTEMA DE AUTENTICAÇÃO ---
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('auth-title');
+            const btn = document.getElementById('auth-btn');
+            const toggleText = document.querySelector('.auth-toggle');
+            
+            if(isLoginMode) {
+                title.innerText = "Acesso Restrito";
+                btn.innerText = "Entrar";
+                toggleText.innerHTML = "Não tem conta? <span>Cadastre-se</span>";
+            } else {
+                title.innerText = "Novo Recruta";
+                btn.innerText = "Criar Conta";
+                toggleText.innerHTML = "Já possui conta? <span>Fazer Login</span>";
+            }
+        }
+
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+
+            Swal.fire({ title: 'Aguarde...', background: '#141b2d', color: '#fff', didOpen: () => Swal.showLoading() });
+
+            try {
+                if(isLoginMode) {
+                    await auth.signInWithEmailAndPassword(email, password);
+                } else {
+                    await auth.createUserWithEmailAndPassword(email, password);
+                }
+                Swal.close();
+            } catch (error) {
+                Swal.fire('Erro de Autenticação', error.message, 'error');
+            }
+        });
+
+        function logout() { auth.signOut(); }
+
+        auth.onAuthStateChanged((user) => {
+            const authContainer = document.getElementById('auth-container');
+            const dashContainer = document.getElementById('dashboard-container');
+
+            if (user) {
+                currentUser = user;
+                authContainer.style.display = 'none';
+                dashContainer.style.display = 'block';
+                iniciarLeituraDeDados(user.uid);
+                document.getElementById('auth-form').reset();
+            } else {
+                currentUser = null;
+                authContainer.style.display = 'flex';
+                dashContainer.style.display = 'none';
+                if (unsubscribeSnapshot) unsubscribeSnapshot();
+                registrosBrutos = [];
+                atualizarTudo();
+            }
+        });
+
+        // --- SISTEMA DE DADOS (FIRESTORE) ---
+        function iniciarLeituraDeDados(uid) {
+            document.getElementById('ai-messages').innerHTML = '<div class="ai-msg">Conectando aos seus dados seguros...</div>';
+            
+            unsubscribeSnapshot = db.collection("estudos")
+                .where("userId", "==", uid)
+                .onSnapshot((snapshot) => {
+                    registrosBrutos = [];
+                    snapshot.forEach((doc) => {
+                        registrosBrutos.push({ docId: doc.id, ...doc.data() });
+                    });
+                    atualizarTudo();
+                }, (error) => {
+                    console.error("Erro ao conectar no banco:", error);
+                    document.getElementById('ai-messages').innerHTML = 
+                        `<div class="ai-msg" style="border-left-color: var(--danger);"><strong><i class="fa-solid fa-triangle-exclamation"></i> Erro de Conexão</strong>Permissão negada ou erro de rede.</div>`;
+                });
+        }
+
+        document.getElementById('study-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!currentUser) return;
+
+            const novo = {
+                userId: currentUser.uid,
+                timestamp: Date.now(),
+                data: new Date().toISOString().split('T')[0],
+                materia: document.getElementById('materia').value,
+                assunto: document.getElementById('assunto').value,
+                acertos: parseInt(document.getElementById('acertos').value),
+                erros: parseInt(document.getElementById('erros').value),
+                horas: parseFloat(document.getElementById('horas').value)
+            };
+
+            try {
+                await db.collection("estudos").add(novo);
+                Swal.fire({
+                    icon: 'success', title: 'Sincronizado na Nuvem!', background: '#141b2d', color: '#fff', timer: 1200, showConfirmButton: false
+                });
+                e.target.reset();
+                resetTimer();
+            } catch (err) {
+                Swal.fire('Erro', 'Não foi possível salvar na nuvem: ' + err.message, 'error');
+            }
+        });
+
+        async function deletar(docId) {
+            if(!currentUser) return;
+            try { await db.collection("estudos").doc(docId).delete(); } 
+            catch(e) { Swal.fire('Erro', 'Não foi possível deletar.', 'error'); }
+        }
+
+        // --- SISTEMA DO DASHBOARD ---
+        function getDadosFiltrados() {
+            const filtro = document.getElementById('filtro-global').value;
+            const hoje = new Date();
+            
+            return registrosBrutos.filter(r => {
+                const dataRegistro = new Date(r.data + 'T12:00:00');
+                if (filtro === 'semana') {
+                    const seteDiasAtras = new Date();
+                    seteDiasAtras.setDate(hoje.getDate() - 7);
+                    return dataRegistro >= seteDiasAtras && dataRegistro <= hoje;
+                } else if (filtro === 'mes') {
+                    const mesAtras = new Date();
+                    mesAtras.setMonth(hoje.getMonth() - 1);
+                    return dataRegistro >= mesAtras && dataRegistro <= hoje;
+                } else if (filtro === '2meses') {
+                    const doisMesesAtras = new Date();
+                    doisMesesAtras.setMonth(hoje.getMonth() - 2);
+                    return dataRegistro >= doisMesesAtras && dataRegistro <= hoje;
+                } else if (filtro === '3meses') {
+                    const tresMesesAtras = new Date();
+                    tresMesesAtras.setMonth(hoje.getMonth() - 3);
+                    return dataRegistro >= tresMesesAtras && dataRegistro <= hoje;
+                }
+                return true; 
+            });
+        }
+
+        function aplicarFiltroTemporal() { atualizarTudo(); }
+
+        function toggleTimer() {
+            const btn = document.getElementById('timer-btn');
+            if(!isRunning) {
+                isRunning = true;
+                btn.textContent = "Pausar";
+                btn.style.background = "var(--accent)";
+                btn.style.color = "#000";
+                timerInterval = setInterval(() => {
+                    timerSeconds++;
+                    updateTimerDisplay();
+                }, 1000);
+            } else {
+                isRunning = false;
+                btn.textContent = "Retomar";
+                btn.style.background = "var(--primary)";
+                btn.style.color = "#000";
+                clearInterval(timerInterval);
+                document.getElementById('horas').value = (timerSeconds / 3600).toFixed(2);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            timerSeconds = 0;
+            updateTimerDisplay();
+            document.getElementById('timer-btn').textContent = "Iniciar";
+            document.getElementById('timer-btn').style.background = "var(--primary)";
+            document.getElementById('timer-btn').style.color = "var(--bg-deep)";
+        }
+
+        function updateTimerDisplay() {
+            const h = Math.floor(timerSeconds / 3600);
+            const m = Math.floor((timerSeconds % 3600) / 60);
+            const s = timerSeconds % 60;
+            document.getElementById('timer-display').textContent = 
+                `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        }
+
+        function atualizarTudo() {
+            const dados = getDadosFiltrados();
+            renderStats(dados);
+            renderTable(dados);
+            renderMastery(dados);
+            renderChart(dados);
+            gerarMentoriaIA(dados);
+        }
+
+        function renderStats(dados) {
+            const totalH = dados.reduce((acc, r) => acc + r.horas, 0);
+            const totalA = dados.reduce((acc, r) => acc + r.acertos, 0);
+            const totalE = dados.reduce((acc, r) => acc + r.erros, 0);
+            const totalQ = totalA + totalE;
+            const prec = totalQ > 0 ? ((totalA / totalQ) * 100).toFixed(1) : 0;
+
+            const filtroLabel = document.getElementById('filtro-global').options[document.getElementById('filtro-global').selectedIndex].text;
+            document.getElementById('label-horas').textContent = `Horas (${filtroLabel})`;
+
+            document.getElementById('stat-horas').textContent = totalH.toFixed(1);
+            document.getElementById('stat-precisao').textContent = prec + '%';
+            document.getElementById('stat-questoes').textContent = totalQ;
+            document.getElementById('qtd-registros').textContent = `${dados.length} Missões`;
+        }
+
+        function renderTable(dados) {
+            const tbody = document.querySelector('#history-table tbody');
+            tbody.innerHTML = '';
+            
+            [...dados].sort((a, b) => new Date(b.data) - new Date(a.data)).forEach(r => {
+                const total = r.acertos + r.erros;
+                const perc = total > 0 ? ((r.acertos / total) * 100).toFixed(0) : 0;
+                const status = perc >= 75 ? 'badge-success' : 'badge-danger';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="color:var(--text-dim); font-size:0.75rem;">${r.data.split('-').reverse().slice(0,2).join('/')}</td>
+                        <td>
+                            <strong style="display:block">${r.materia}</strong>
+                            <span class="badge badge-topic" style="margin-top:4px; display:inline-block;">${r.assunto}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${status}">${perc}%</span>
+                            <br><small style="color:var(--text-dim)">${r.acertos}A / ${r.erros}E</small>
+                        </td>
+                        <td data-html2canvas-ignore="true" style="text-align:center;"><i class="fa-solid fa-trash-can" style="cursor:pointer; color:var(--danger); padding: 5px;" onclick="deletar('${r.docId}')"></i></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderMastery(dados) {
+            const materias = {};
+            dados.forEach(r => {
+                if(!materias[r.materia]) materias[r.materia] = { a: 0, q: 0 };
+                materias[r.materia].a += r.acertos;
+                materias[r.materia].q += (r.acertos + r.erros);
+            });
+
+            const container = document.getElementById('mastery-list');
+            container.innerHTML = '';
+
+            if (Object.keys(materias).length === 0) {
+                container.innerHTML = '<span style="color: var(--text-dim); font-size: 0.8rem;">Sem dados para este período.</span>';
+                return;
+            }
+
+            const sortedMaterias = Object.keys(materias).sort((a,b) => {
+                const pA = materias[a].a / (materias[a].q || 1);
+                const pB = materias[b].a / (materias[b].q || 1);
+                return pA - pB;
+            });
+
+            sortedMaterias.forEach(m => {
+                const perc = materias[m].q > 0 ? (materias[m].a / materias[m].q) * 100 : 0;
+                container.innerHTML += `
+                    <div style="margin-bottom: 12px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom: 3px;">
+                            <span>${m}</span>
+                            <span style="color: ${perc >= 75 ? 'var(--success)' : (perc >= 50 ? 'var(--accent)' : 'var(--danger)')}">${perc.toFixed(0)}%</span>
+                        </div>
+                        <div class="maestria-bar">
+                            <div class="maestria-fill" style="width: ${perc}%; background: ${perc >= 75 ? 'var(--success)' : (perc >= 50 ? 'var(--accent)' : 'var(--danger)')};"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- NOVA FUNÇÃO RENDER CHART (OTIMIZADA E COM DESIGN MODERNO) ---
+        function renderChart(dados) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const filtroAtual = document.getElementById('filtro-global').value;
+            
+            // 1. ALTA PERFORMANCE: Agrupamento O(N) com Dicionário
+            const horasPorDia = {};
+            dados.forEach(r => {
+                if (!horasPorDia[r.data]) horasPorDia[r.data] = 0;
+                horasPorDia[r.data] += r.horas;
+            });
+
+            // 2. DEFINIÇÃO DA JANELA DE TEMPO (Dias contínuos para evitar buracos)
+            let dias = 7; 
+            if (filtroAtual === 'mes') dias = 30;
+            else if (filtroAtual === '2meses') dias = 60;
+            else if (filtroAtual === '3meses') dias = 90;
+            else if (filtroAtual === 'todos') {
+                if(dados.length > 0) {
+                    // Calcula a diferença da data mais antiga até hoje
+                    const datas = dados.map(d => new Date(d.data + 'T12:00:00'));
+                    const dataMaisAntiga = new Date(Math.min(...datas));
+                    const diffTime = Math.abs(new Date() - dataMaisAntiga);
+                    dias = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    if(dias > 365) dias = 365; // Limite de 1 ano para renderização na web
+                } else {
+                    dias = 7;
+                }
+            }
+
+            // 3. ESTRUTURAÇÃO DO EIXO X e DADOS
+            const datasLabels = [];
+            const dadosGrafico = [];
+            const hoje = new Date();
+
+            // Gera de trás pra frente (do mais antigo pro mais novo)
+            for (let i = dias - 1; i >= 0; i--) {
+                const d = new Date(hoje);
+                d.setDate(d.getDate() - i);
+                const dataISO = d.toISOString().split('T')[0];
+                
+                // Label formatada: dd/mm
+                datasLabels.push(dataISO.split('-').reverse().slice(0,2).join('/'));
+                
+                // Insere o valor ou 0 caso não tenha estudado no dia
+                dadosGrafico.push(horasPorDia[dataISO] || 0);
+            }
+
+            // 4. DESIGN PROFISSIONAL / DESTRUIÇÃO DO GRÁFICO ANTERIOR
+            if(myChart) myChart.destroy();
+            
+            // Cria um gradiente elegante usando a cor primária (Ciano)
+            const gradientFill = ctx.createLinearGradient(0, 0, 0, 300);
+            gradientFill.addColorStop(0, 'rgba(0, 242, 255, 0.4)'); // Topo visível
+            gradientFill.addColorStop(1, 'rgba(0, 242, 255, 0.0)'); // Fundo transparente
+
+            // Configurações globais da fonte para o Chart.js
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: datasLabels,
+                    datasets: [{
+                        label: 'Horas Operacionais',
+                        data: dadosGrafico,
+                        borderColor: '#00f2ff', 
+                        backgroundColor: gradientFill,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4, // Suavidade das curvas
+                        pointBackgroundColor: '#141b2d', // Fundo do ponto (cor do painel)
+                        pointBorderColor: '#00f2ff',
+                        pointBorderWidth: 2,
+                        pointRadius: 1, // Pontos bem discretos...
+                        pointHoverRadius: 6, // ...que crescem ao passar o mouse
+                        pointHoverBackgroundColor: '#00f2ff',
+                        pointHoverBorderColor: '#fff',
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    interaction: { mode: 'index', intersect: false }, // Hover pega a coluna inteira
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { // Tooltip personalizada estilo Cyberpunk/Dash
+                            backgroundColor: 'rgba(10, 15, 26, 0.95)',
+                            titleColor: '#00f2ff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#2d3748',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `⏱️ ${context.parsed.y.toFixed(1)} horas de missão`;
+                                }
+                            }
+                        }
+                    },
+                    scales: { 
+                        x: { 
+                            grid: { display: false, drawBorder: false },
+                            ticks: { 
+                                color: '#8b9bb4',
+                                maxTicksLimit: 7 // Evita embolar os textos no eixo X se o período for muito longo
+                            }
+                        }, 
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { 
+                                color: 'rgba(255, 255, 255, 0.05)', 
+                                drawBorder: false,
+                                borderDash: [5, 5] // Linhas de fundo tracejadas (tático)
+                            },
+                            ticks: {
+                                color: '#8b9bb4',
+                                callback: function(value) { return value + 'h'; } // Adiciona "h" nos números
+                            }
+                        } 
+                    }
+                }
+            });
+        }
+
+        function gerarMentoriaIA(dados) {
+            const container = document.getElementById('ai-messages');
+            if(dados.length === 0) {
+                container.innerHTML = '<div class="ai-msg">Nenhum dado registrado ainda. Registre uma missão para ativar a análise.</div>';
+                return;
+            }
+
+            const totalQ = dados.reduce((acc, r) => acc + (r.acertos + r.erros), 0);
+            const totalErros = dados.reduce((acc, r) => acc + r.erros, 0);
+            const precisaoGeral = totalQ > 0 ? ((totalQ - totalErros) / totalQ) * 100 : 0;
+
+            let msgEstrategista = `Sua precisão neste período é de ${precisaoGeral.toFixed(1)}%.`;
+            if (precisaoGeral < 70) msgEstrategista += " Retorne à teoria nos pontos sinalizados abaixo.";
+            else msgEstrategista += " Nível adequado. Mantenha o ritmo de revisões e questões.";
+            
+            // 1. Estruturar os erros agrupados por Matéria e depois por Assunto
+            let errosPorMateria = {};
+            dados.forEach(r => {
+                if(r.erros > 0) {
+                    if(!errosPorMateria[r.materia]) errosPorMateria[r.materia] = {};
+                    
+                    let topicos = r.assunto.split(',').map(t => t.trim()).filter(t => t);
+                    topicos.forEach(t => {
+                        if(!errosPorMateria[r.materia][t]) errosPorMateria[r.materia][t] = 0;
+                        errosPorMateria[r.materia][t] += r.erros;
+                    });
+                }
+            });
+
+            let msgProfessor = "";
+
+            // 2. Montar o HTML visualmente estruturado por disciplina
+            if (Object.keys(errosPorMateria).length > 0) {
+                msgProfessor = `<span style="display:block; margin-bottom: 12px; color: var(--text-high);">Detalhamento de pontos de melhoria:</span>`;
+                
+                // Ordena as matérias em ordem alfabética para facilitar a busca visual
+                Object.keys(errosPorMateria).sort().forEach(materia => {
+                    msgProfessor += `<div style="margin-bottom: 12px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border-left: 3px solid var(--danger);">
+                                        <div style="font-weight: 800; color: var(--text-high); text-transform: uppercase; font-size: 0.75rem; margin-bottom: 8px; letter-spacing: 0.5px;">
+                                            📚 ${materia}
+                                        </div>`;
+                    
+                    let assuntos = errosPorMateria[materia];
+                    // Ordena os assuntos do que tem mais erros para o que tem menos
+                    let assuntosOrdenados = Object.keys(assuntos)
+                        .map(key => ({ nome: key, erros: assuntos[key] }))
+                        .sort((a, b) => b.erros - a.erros);
+
+                    assuntosOrdenados.forEach(item => {
+                        msgProfessor += `<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding: 6px 0; font-size: 0.75rem;">
+                                            <span style="color: var(--text-dim); padding-right: 10px;">❌ ${item.nome}</span>
+                                            <span class="badge badge-danger" style="font-size: 0.65rem;">${item.erros} erro(s)</span>
+                                         </div>`;
+                    });
+                    msgProfessor += `</div>`;
+                });
+            } else {
+                msgProfessor = "Rendimento limpo neste ciclo. Nenhum erro registrado nos dados atuais.";
+            }
+
+            container.innerHTML = `
+                <div class="ai-msg estrategista"><strong><i class="fa-solid fa-chess-knight"></i> Estrategista</strong>${msgEstrategista}</div>
+                <div class="ai-msg professor" style="border-left-color: var(--danger);"><strong><i class="fa-solid fa-microscope"></i> Raio-X de Erros</strong>${msgProfessor}</div>
+            `;
+        }
+
+        // --- ATUALIZAÇÃO DA EXPORTAÇÃO A4 ---
+        function exportarLayoutPDF() {
+            Swal.fire({
+                title: 'Gerando Relatório...', allowOutsideClick: false,
+                background: '#141b2d', color: '#fff', didOpen: () => { Swal.showLoading(); }
+            });
+            
+            // Injeta a data atual no título que vai pro PDF
+            document.getElementById('data-pdf-gerado').innerText = "Gerado em: " + new Date().toLocaleDateString('pt-BR');
+
+            // Adiciona a classe que tira as rolagens e prepara formato A4 
+            document.body.classList.add('pdf-export-mode');
+
+            const elemento = document.getElementById('relatorio-tatico');
+            const opt = {
+                margin: 10, 
+                filename: `Relatorio_PCPA_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 1 },
+                // Alterado background para branco para forçar no PDF
+                html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+            };
+            
+            html2pdf().set(opt).from(elemento).save().then(() => { 
+                // Remove a classe para a página voltar ao normal no navegador
+                document.body.classList.remove('pdf-export-mode');
+                Swal.close(); 
+            });
+        }
+
+        async function exportarExcel() {
+            try {
+                const dados = getDadosFiltrados();
+                const workbook = new ExcelJS.Workbook();
+                const sheet = workbook.addWorksheet('Log Tático');
+                sheet.columns = [
+                    { header: 'DATA', key: 'data', width: 15 }, { header: 'MATÉRIA', key: 'materia', width: 25 },
+                    { header: 'ASSUNTO', key: 'assunto', width: 40 }, { header: 'ACERTOS', key: 'acertos', width: 10 },
+                    { header: 'ERROS', key: 'erros', width: 10 }, { header: 'HORAS', key: 'horas', width: 10 }
+                ];
+                sheet.getRow(1).font = { bold: true };
+                const dadosExcel = dados.map(r => ({ ...r, data: r.data.split('-').reverse().join('/') }));
+                dadosExcel.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(r => sheet.addRow(r));
+                const buffer = await workbook.xlsx.writeBuffer();
+                saveAs(new Blob([buffer]), `Planilha.xlsx`);
+            } catch(e) { Swal.fire('Erro', 'Ocorreu um erro ao gerar Excel.', 'error'); }
+        }
+    </script>
+</body>
+</html>
+
